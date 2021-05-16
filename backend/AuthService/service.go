@@ -6,18 +6,44 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/HiteshRepo/blog-application/global"
 	"github.com/HiteshRepo/blog-application/proto"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"google.golang.org/grpc"
 )
 
 type authServer struct{}
+
+func Validations(in *proto.SignupRequest) error {
+
+	username, email, password := in.GetUsername(), in.GetEmail(), in.GetPassword()
+
+	emailRegex := regexp.MustCompile(global.EmailRegex)
+
+	if len(username) < 4 || len(username) > 20 {
+		return errors.New("Username should be greater that 4 and less than 20.")
+	}
+	if len(email) < 7 || len(email) > 35 {
+		return errors.New("Email should be greater that 7 and less than 35.")
+	}
+	if len(password) < 8 || len(password) > 120 {
+		return errors.New("Password should be greater that 8 and less than 120.")
+	}
+	if !emailRegex.MatchString(email) {
+		return errors.New("Invalid email format.")
+	}
+	return nil
+}
 
 func (a *authServer) Login(_ context.Context, in *proto.LoginRequest) (*proto.AuthResponse, error) {
 
@@ -48,7 +74,7 @@ func (a *authServer) Login(_ context.Context, in *proto.LoginRequest) (*proto.Au
 
 func (a *authServer) Signup(ctx context.Context, in *proto.SignupRequest) (*proto.AuthResponse, error) {
 
-	err := a.Validations(in)
+	err := Validations(in)
 	if err != nil {
 		return &proto.AuthResponse{}, errors.New(fmt.Sprintf("Validation failed : %s", err.Error()))
 	}
@@ -140,5 +166,29 @@ func main() {
 	if err != nil {
 		log.Fatal("Error creating listener : ", err.Error())
 	}
-	server.Serve(listener)
+	go func() {
+		log.Fatal("serving gRPC: ", server.Serve(listener).Error())
+	}()
+
+	grpcWebServer := grpcweb.WrapServer(server)
+
+	httpServer := &http.Server{
+		Addr: ":9001",
+		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.ProtoMajor == 2 {
+				grpcWebServer.ServeHTTP(w, r)
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+				w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-User-Agent, X-Grpc-Web")
+				w.Header().Set("grpc-status", "")
+				w.Header().Set("grpc-message", "")
+				if grpcWebServer.IsGrpcWebRequest(r) {
+					grpcWebServer.ServeHTTP(w, r)
+				}
+			}
+		}), &http2.Server{}),
+	}
+
+	log.Fatal("serving proxy : ", httpServer.ListenAndServe().Error())
 }
