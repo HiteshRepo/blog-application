@@ -76,6 +76,4 @@ I have added test cases only for service.go with coverage of 73.8%
 
 ## Acknowledgments
 
-- Hat tip to anyone whose code was used
-- Inspiration
-- etc
+- https://rogchap.com/
