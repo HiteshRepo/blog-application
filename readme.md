@@ -28,15 +28,40 @@ golang/alpine/apk:
 
 To run:
 
-1. Clone the repo.
+1. Clone the repo:
+
+```
+git clone https://github.com/HiteshRepo/blog-application.git
+```
+
 2. cd to blog-application directory.
-3. docker build -t blog-grpc-app-backend .
-4. docker run -d -p 9001:9001 blog-grpc-app-backend
-5. cd to frontend sub-directory.
-6. docker build -t blog-grpc-app-frontend .
-7. docker run -d -p 1234:1234 -p 7001:7001 blog-grpc-app-frontend.
+3. docker image for grpc backend:
+
+```
+docker build -t blog-grpc-app-backend.
+```
+
+4. docker container for grpc backend image:
+
+```
+docker run -d -p 9001:9001 blog-grpc-app-backend
+```
+
+5. cd to 'frontend' sub-directory.
+6. docker image for grpc frontend:
+
+```
+docker build -t blog-grpc-app-frontend.
+```
+
+7. docker container for grpc backend image:
+
+```
+docker run -d -p 1234:1234 -p 7001:7001 blog-grpc-app-frontend.
+```
+
 8. After the containers have successfully started: go to http://localhost:1234
-9. Try Signup, Login and Logout
+9. Try Signup, Login and Logout actions.
 
 ## Running the tests
 
