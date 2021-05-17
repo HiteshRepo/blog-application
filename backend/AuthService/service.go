@@ -15,6 +15,7 @@ import (
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -22,7 +23,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-type authServer struct{}
+type authServer struct {
+	userCollection *mongo.Collection
+}
 
 func Validations(in *proto.SignupRequest) error {
 
@@ -56,7 +59,7 @@ func (a *authServer) Login(_ context.Context, in *proto.LoginRequest) (*proto.Au
 
 	// look for user by creds entered
 	var user global.User
-	global.DB.Collection("user").FindOne(ctx, bson.M{"$or": []bson.M{bson.M{"username": login}, bson.M{"email": login}}}).Decode(&user)
+	a.userCollection.FindOne(ctx, bson.M{"$or": []bson.M{bson.M{"username": login}, bson.M{"email": login}}}).Decode(&user)
 
 	// check for empty user record
 	if user == global.NilUser {
@@ -111,7 +114,7 @@ func (a *authServer) Signup(ctx context.Context, in *proto.SignupRequest) (*prot
 	// insert user to db should not take more that 5 seconds
 	ctx, cancel := global.NewDBContext(5 * time.Second)
 	defer cancel()
-	_, err = global.DB.Collection("user").InsertOne(ctx, newUser)
+	_, err = a.userCollection.InsertOne(ctx, newUser)
 	if err != nil {
 		log.Println("Error returned while inserting user to DB : ", err.Error())
 		return nil, errors.New("Internal error while inserting user to DB.")
@@ -130,7 +133,7 @@ func (a *authServer) UsernameUsed(_ context.Context, in *proto.UsernameUsedReque
 	defer cancel()
 
 	var user global.User
-	global.DB.Collection("user").FindOne(ctx, bson.M{"username": username}).Decode(&user)
+	a.userCollection.FindOne(ctx, bson.M{"username": username}).Decode(&user)
 
 	return &proto.UsedResponse{Used: user != global.NilUser}, nil
 }
@@ -144,7 +147,7 @@ func (a *authServer) EmailUsed(_ context.Context, in *proto.EmailUsedRequest) (*
 	defer cancel()
 
 	var user global.User
-	global.DB.Collection("user").FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	a.userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 
 	return &proto.UsedResponse{Used: user != global.NilUser}, nil
 }
@@ -159,21 +162,27 @@ func (a *authServer) AuthUser(_ context.Context, in *proto.AuthUserRequest) (*pr
 }
 
 func main() {
-	server := grpc.NewServer()
-	proto.RegisterAuthServiceServer(server, &authServer{})
 
-	listener, err := net.Listen("tcp", ":5000")
+	fmt.Println("Starting......")
+
+	server := grpc.NewServer()
+	proto.RegisterAuthServiceServer(server, &authServer{userCollection: global.DB.Collection("user")})
+
+	// GRPC listener ":5000"
+	listener, err := net.Listen("tcp", "0.0.0.0:5000") //+os.Getenv("GRPCPORT"))
 	if err != nil {
-		log.Fatal("Error creating listener : ", err.Error())
+		fmt.Printf("Error creating listener : %v\n", err)
 	}
 	go func() {
-		log.Fatal("serving gRPC: ", server.Serve(listener).Error())
+		fmt.Println("GRPC server serving....")
+		fmt.Printf("serving gRPC: %v\n", server.Serve(listener).Error())
 	}()
 
 	grpcWebServer := grpcweb.WrapServer(server)
 
 	httpServer := &http.Server{
-		Addr: ":9001",
+		// proxy port ":9001"
+		Addr: "0.0.0.0:9001", //+ os.Getenv("PORT"),
 		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.ProtoMajor == 2 {
 				grpcWebServer.ServeHTTP(w, r)
@@ -190,5 +199,6 @@ func main() {
 		}), &http2.Server{}),
 	}
 
-	log.Fatal("serving proxy : ", httpServer.ListenAndServe().Error())
+	fmt.Println("Proxy server is going up....")
+	fmt.Printf("serving proxy : %v\n", httpServer.ListenAndServe().Error())
 }

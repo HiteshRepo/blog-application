@@ -1,6 +1,7 @@
 module github.com/HiteshRepo/blog-application
 
-go 1.15
+go 1.17
+//+heroku goVersion go1.17
 
 require (
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
