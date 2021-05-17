@@ -7,7 +7,7 @@
   box-sizing: border-box;
 }
 
-div.login-div {
+div.auth-div {
   margin: 0 auto;
   padding: 30px;
   text-align: center;
@@ -15,6 +15,11 @@ div.login-div {
   width: 95%;
   max-width: 400px;
   border-radius: 12px;
+
+  .error {
+    color: red;
+    font-size: smaller;
+  }
 
   input {
     padding: 1px;
@@ -46,4 +51,30 @@ button {
   font-weight: bold;
   font-size: 12pt;
   cursor: pointer;
+}
+
+div.home-div {
+  div.button-container {
+    padding: 30px;
+    width: 95%;
+    margin: 25px auto;
+    max-width: 500px;
+    display: flex;
+    flex-direction: row;
+    background-color: #e8e8e8;
+    border-radius: 14px;
+  }
+
+  h2 {
+    text-align: center;
+  }
+
+  div.auth-text {
+    padding: 30px;
+    width: 95%;
+    margin: 25px auto;
+    max-width: 500px;
+    background-color: #e8e8e8;
+    border-radius: 14px;
+  }
 }
