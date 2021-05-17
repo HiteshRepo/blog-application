@@ -74,6 +74,17 @@ I have added test cases only for service.go with coverage of 73.8%
 2. Have view user-based posts.
 3. Also comment on posts.
 
+## Some screen-casts
+
+Landing-Page:
+![Alt Text](https://github.com/HiteshRepo/blog-application/blob/master/extras/Blog-App-Landing.gif)
+
+Login:
+![Alt Text](https://github.com/HiteshRepo/blog-application/blob/master/extras/Blog-App-Login.gif)
+
+Signup:
+![Alt Text](https://github.com/HiteshRepo/blog-application/blob/master/extras/Blog-App-Signup.gif)
+
 ## Acknowledgments
 
 - https://rogchap.com/
